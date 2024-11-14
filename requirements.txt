@@ -1,0 +1,12 @@
+openai
+langchain
+python-dotenv
+langchain-huggingface
+langchain-community
+langchain_openai
+langchain-postgres
+pgvector 
+psycopg2-binary
+psycopg[binary]
+SQLAlchemy
+pandas
