@@ -23,6 +23,6 @@ First, install the required Python packages with "pip install -r requirements.tx
 Then run the scripts in directory src:
 - no_rag_pipeline.py will prompt a LLM for an answer
 - rag_pipeline.py will prompt a LLM with augmented information. The information comes from teh vector store that must be loaded before using index_pipeline.py.
-- 
+
 For more information on Vector databases see my personal blog, e.g. [Vector databases - what, why, and how](https://buckenhofer.com/2024/05/vector-database-what-why-and-how/).
 
