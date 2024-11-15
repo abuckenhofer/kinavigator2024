@@ -1,70 +1,107 @@
 import os
 from dotenv import load_dotenv
-from sqlalchemy import create_engine
-from langchain.prompts import PromptTemplate
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-from langchain_postgres import PGVector  # Ensure this import is correct
+from openai import OpenAI, embeddings
+from langchain_openai import OpenAIEmbeddings
+import psycopg2
 
-# .env-Datei laden
+
+# Generate embedding for the prompt
+
+def get_embedding(text, model="text-embedding-3-small"):
+   #text = text.replace("\n", " ")
+   #return client.embeddings.create(input = [text], model=model).data[0].embedding
+   embeddings = OpenAIEmbeddings(api_key=openai_api_key)
+   embeddings_list = embeddings.embed_query(text)
+
+# Connect to the PostgreSQL database
+def get_relevant_content(embedding):
+    # Establish the connection
+    conn = psycopg2.connect(
+        host=db_host,
+        dbname=db_name,
+        user=db_user,
+        password=db_password
+    )
+
+    # Convert the embedding to a PostgreSQL vector-friendly format
+    embedding_str = ','.join(map(str, embedding))
+
+    # Define the SQL query to retrieve the most similar content using cosine similarity
+    query = f"""
+        SELECT content, embedding <=> '[{embedding_str}]'::vector AS similarity
+        FROM documents
+        ORDER BY similarity
+        LIMIT 1;
+    """
+    
+    try:
+        # Execute the query
+        with conn.cursor() as cur:
+            cur.execute(query)
+            result = cur.fetchone()
+            
+            if result:
+                return result[0]  # Return the content
+            else:
+                return "No relevant content found."
+
+    except Exception as e:
+        print(f"Error querying the database: {e}")
+    finally:
+        # Close the connection
+        conn.close()
+
+# .env-Datei aus übergeordnetem Verzeichnis laden
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "../.env"))
 
-# API-Schlüssel und Datenbankdetails sicher aus Umgebungsvariablen laden
-openai_api_key = os.getenv("OPENAI_API_KEY")
 db_host = os.getenv("DB_HOST")
 db_name = os.getenv("DB_NAME")
 db_user = os.getenv("DB_USER")
 db_password = os.getenv("DB_PASSWORD")
-
-# Überprüfen, ob alle erforderlichen Umgebungsvariablen gesetzt sind
-if not openai_api_key:
-    raise EnvironmentError("OPENAI_API_KEY ist nicht in der .env-Datei gesetzt.")
 if not all([db_host, db_name, db_user, db_password]):
-    raise EnvironmentError("Datenbankkonfigurationswerte sind nicht in der .env-Datei gesetzt.")
+    raise EnvironmentError("Database credentials are not set correctly in the .env file.")
 
-# SQLAlchemy-Engine erstellen
-db_connection_string = f"postgresql://{db_user}:{db_password}@{db_host}/{db_name}"
-engine = create_engine(db_connection_string)
+openai_api_key = os.getenv("OPENAI_API_KEY")
+if openai_api_key is None:
+    raise EnvironmentError("OPENAI_API_KEY ist nicht in der .env-Datei gesetzt.")
 
-# Embeddings-Instanz initialisieren
+client = OpenAI()
+
+
+prompt = "Who is the US president in 2024?"
+
+# Instantiate the embeddings object
+#embeddings=OpenAIEmbeddings(model="text-embedding-3-large")
+
 embeddings = OpenAIEmbeddings(api_key=openai_api_key)
+embedding = embeddings.embed_query(prompt)
 
-# PGVector-Instanz mit SQLAlchemy-Engine und Embedding-Instanz erstellen
-vector_store = PGVector(connection=engine, embedding_function=embeddings)
+retrieved_context = get_relevant_content(embedding)
+print(retrieved_context)
 
-# OpenAI-Chat-LLM initialisieren
-llm = ChatOpenAI(model_name="gpt-3.5-turbo", openai_api_key=openai_api_key)
+augmented_prompt=f"""
 
-# Prompt-Vorlage erstellen
-prompt_template = PromptTemplate(
-    input_variables=["context", "prompt_text"],
-    template="Antwort basierend auf den folgenden Informationen:\n\n{context}\n\nFrage: {prompt_text}"
+Given the context below answer the question.
+
+Question: {prompt} 
+
+Context : {retrieved_context}
+
+Remember to answer only based on the context provided and not from any other source. 
+
+If the question cannot be answered based on the provided context, say I don’t know.
+
+"""
+
+# Make the API call passing the prompt to the LLM
+response = client.chat.completions.create(
+  model="gpt-4o",
+  messages=	[
+    {"role": "user", "content": augmented_prompt}
+  		]
 )
 
-# Funktion zur Ausführung der RAG-Pipeline
-def run_pipeline(prompt_text):
-    try:
-        print("Pipeline gestartet...")
-        
-        # 1. Erzeuge den Embedding-Vektor für die Frage
-        question_embedding = embeddings.embed_query(prompt_text)
-        
-        # 2. Suche relevante Dokumente in der Vektordatenbank
-        results = vector_store.similarity_search(query_vector=question_embedding, k=1)
-        context = results[0]["content"] if results else "Kein relevanter Kontext gefunden."
-        
-        # 3. Prompt generieren mit Kontext
-        prompt = prompt_template.format(context=context, prompt_text=prompt_text)
-        
-        # 4. Die Chat-LLM-Ausführung mit dem generierten Prompt
-        response = llm.invoke(prompt)
-        
-        print("Pipeline abgeschlossen.")
-        return response.content
-    except Exception as e:
-        print(f"Fehler: {e}")
-        return None
+# Extract the answer from the response object
+answer=response.choices[0].message.content
 
-# Beispielaufruf
-prompt = "Erkläre die Grundlagen des maschinellen Lernens."
-antwort = run_pipeline(prompt)
-print("Antwort:", antwort)
+print(answer)
