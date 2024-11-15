@@ -12,10 +12,15 @@ docker exec -it pgvector bash
 Now the PostgreSQL command shell can be started: psql -U postgres 
 
 Create a .env file with entries:
+
 OPENAI_API_KEY=
+
 DB_HOST=localhost
+
 DB_NAME=
+
 DB_USER=
+
 DB_PASSWORD=
 
 ## Steps to run example
