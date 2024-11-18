@@ -36,9 +36,9 @@ def create_table():
     with connection.cursor() as cursor:
         cursor.execute("""
             CREATE EXTENSION IF NOT EXISTS vector;
-            CREATE TABLE IF NOT EXISTS documents (
+            CREATE TABLE IF NOT EXISTS document (
                 id SERIAL PRIMARY KEY,
-                content TEXT,
+                content VARCHAR(500),
                 embedding VECTOR(1536)  -- Vektorlänge für OpenAI-Embeddings
             );
         """)
@@ -66,7 +66,7 @@ def insert_documents_batch():
     embeddings_list = [embeddings.embed_query(text) for text in texts]
     
     # Batch-Insert vorbereiten
-    insert_query = "INSERT INTO documents (content, embedding) VALUES (%s, %s)"
+    insert_query = "INSERT INTO document (content, embedding) VALUES (%s, %s)"
     data_to_insert = [(text, embedding) for text, embedding in zip(texts, embeddings_list)]
 
     with connection.cursor() as cursor:

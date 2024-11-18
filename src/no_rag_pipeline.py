@@ -25,6 +25,7 @@ response = client.chat.completions.create(
 # Extract the answer from the response object
 answer=response.choices[0].message.content
 
-print(answer)
+print("question: ", prompt)
+print("answer: ", answer)
 
 

@@ -29,7 +29,7 @@ def get_relevant_content(embedding):
     # Define the SQL query to retrieve the most similar content using cosine similarity
     query = f"""
         SELECT content, embedding <=> '[{embedding_str}]'::vector AS similarity
-        FROM documents
+        FROM document
         ORDER BY similarity
         LIMIT 1;
     """
