@@ -36,7 +36,8 @@ def create_table():
     with connection.cursor() as cursor:
         cursor.execute("""
             CREATE EXTENSION IF NOT EXISTS vector;
-            CREATE TABLE IF NOT EXISTS document (
+            DROP TABLE IF EXISTS document;
+            CREATE TABLE document (
                 id SERIAL PRIMARY KEY,
                 content VARCHAR(500),
                 embedding VECTOR(1536)  -- Vektorlänge für OpenAI-Embeddings
@@ -59,7 +60,7 @@ if not os.path.exists(csv_file_path):
 df = pd.read_csv(csv_file_path)
 
 # Funktion zum Einfügen von Texten und Embeddings in Batches
-def insert_documents_batch():
+def insert_documents_batch(df):
     texts = df['contents'].tolist()
     
     # Berechne Embeddings für jeden Text
@@ -77,7 +78,7 @@ def insert_documents_batch():
 
 # Hauptprogramm
 create_table()
-insert_documents_batch()
+insert_documents_batch(df)
 print("Datenbankaktualisierung abgeschlossen.")
 
 # Verbindung schließen

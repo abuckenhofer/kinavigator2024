@@ -70,9 +70,6 @@ client = OpenAI()
 
 prompt = "Who is the US president in 2024?"
 
-# Instantiate the embeddings object
-#embeddings=OpenAIEmbeddings(model="text-embedding-3-large")
-
 embeddings = OpenAIEmbeddings(api_key=openai_api_key)
 embedding = embeddings.embed_query(prompt)
 
@@ -104,4 +101,7 @@ response = client.chat.completions.create(
 # Extract the answer from the response object
 answer=response.choices[0].message.content
 
-print(answer)
+print("question: ", augmented_prompt)
+print("answer: ", answer)
+print("-----------------------")
+

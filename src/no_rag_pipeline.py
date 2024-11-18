@@ -27,5 +27,6 @@ answer=response.choices[0].message.content
 
 print("question: ", prompt)
 print("answer: ", answer)
+print("-----------------------")
 
 
